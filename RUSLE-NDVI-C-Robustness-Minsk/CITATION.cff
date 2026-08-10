@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite the associated article and this repository."
+title: "RUSLE NDVI-C Parameterisation Robustness in Minsk Region"
+type: software
+authors:
+  - family-names: "Zhao"
+    given-names: "Bochao"
+    orcid: "https://orcid.org/0000-0002-8968-6496"
+year: 2026
+license: MIT

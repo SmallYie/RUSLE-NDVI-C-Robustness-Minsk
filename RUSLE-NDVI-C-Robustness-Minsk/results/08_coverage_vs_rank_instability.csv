@@ -1,0 +1,4 @@
+system:index,Absolute_Spearman_rho,Coverage_variable,Experiment,Instability_variable,Number_of_districts,Rank_basis,Spearman_rho,.geo
+0,0.24294489651986695,Valid_model_coverage_pct,Coverage versus scenario rank instability,Absolute_rank_change,22,District mean A,-0.24294489651986695,"{""type"":""MultiPoint"",""coordinates"":[]}"
+1,0.012028724523373635,Valid_model_coverage_pct,Coverage versus scenario rank instability,Absolute_rank_change,22,Area percentage A >= 20,-0.012028724523373635,"{""type"":""MultiPoint"",""coordinates"":[]}"
+2,0.04310679936708835,Valid_model_coverage_pct,Coverage versus scenario rank instability,Absolute_rank_change,22,Area percentage A >= 50,0.04310679936708835,"{""type"":""MultiPoint"",""coordinates"":[]}"

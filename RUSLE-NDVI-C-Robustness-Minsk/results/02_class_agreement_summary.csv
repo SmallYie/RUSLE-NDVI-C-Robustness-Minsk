@@ -1,0 +1,2 @@
+system:index,Cohens_kappa,Expected_exact_agreement,Expected_quadratic_agreement,Mean_absolute_class_difference,Number_of_classes,Observed_quadratic_agreement,Overall_exact_agreement,Overall_exact_agreement_pct,Quadratic_weighted_kappa,Spatial_unit,Valid_area_km2,.geo
+0,0.2810110435911967,0.2567110981245206,0.7292601425907922,0.9282954719557026,5,0.8730888672236887,0.46558348813030365,46.55834881303036,0.5312432606312104,Minsk Region,17646.5900518994,"{""type"":""MultiPoint"",""coordinates"":[]}"

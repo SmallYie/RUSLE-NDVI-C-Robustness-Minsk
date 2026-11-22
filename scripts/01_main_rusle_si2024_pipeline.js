@@ -1,6 +1,18 @@
 // ============================================================================
+// PUBLIC REPRODUCIBILITY VERSION
+// Manuscript: Scale-dependent robustness of RUSLE erosion-hazard prioritisation
+//             to NDVI-C parameterisation in Minsk Region, Belarus
+//
+// IMPORTANT:
+// - Replace placeholder Earth Engine asset IDs before running.
+// - Restricted/institutional Belarusian source datasets are not redistributed.
+// - Exact published outputs require the prepared R, K, L/S or LS, district and
+//   land-cover inputs described in the manuscript and repository documentation.
+// ============================================================================
+
+// ============================================================================
 // RUSLE VDK–Linear scenario comparison
-// Official five-class erosion scheme for Belarus
+// Five-class erosion scheme used in the manuscript
 // Minsk Region, Belarus, 2024
 //
 // Official class boundaries:
@@ -28,7 +40,7 @@
 
 // Administrative districts.
 var districts = ee.FeatureCollection(
-  'projects/ee-geochzhao0822/assets/Misnk_Districts_Boundry_ESPG32635'
+  'projects/YOUR_EE_PROJECT/assets/MINSK_DISTRICTS'
 );
 
 // District-name field.
@@ -37,14 +49,14 @@ var DISTRICT_NAME_FIELD = 'F09';
 
 // Final RUSLE products.
 var rusleVDK0 = ee.Image(
-  'projects/ee-geochzhao0822/assets/RUSLE_VDK_KOD2K_S2C_2024'
+  'projects/YOUR_EE_PROJECT/assets/RUSLE_VDK_SI_SI_2024'
 )
   .select(0)
   .toFloat()
   .rename('A_VDK');
 
 var rusleLinear0 = ee.Image(
-  'projects/ee-geochzhao0822/assets/RUSLE_LINEAR_KOD2K_S2C_2024'
+  'projects/YOUR_EE_PROJECT/assets/RUSLE_LINEAR_SI_SI_2024'
 )
   .select(0)
   .toFloat()
@@ -60,8 +72,8 @@ var MIN_VDK_FOR_RATIO = 0.1;
 
 // Output asset.
 var OUTPUT_COMPARISON_ASSET =
-  'projects/ee-geochzhao0822/assets/' +
-  'RUSLE_VDK_LINEAR_Comparison_2024_Official5Class';
+  'projects/YOUR_EE_PROJECT/assets/' +
+  'RUSLE_VDK_LINEAR_Comparison_SI_2024_Official5Class';
 
 // Region geometry.
 var region = districts.geometry();
@@ -158,10 +170,10 @@ var comparisonContinuous = rusleVDK
 
 
 // ============================================================================
-// 4. OFFICIAL FIVE-CLASS RISK SCHEME
+// 4. OFFICIAL FIVE-CLASS EROSION SCHEME
 // ============================================================================
 
-function classifyRisk5(img) {
+function classifyErosionClass5(img) {
   return ee.Image.constant(1)
 
     // Class 2: 5 <= A < 10
@@ -193,16 +205,16 @@ function classifyRisk5(img) {
     .toInt8();
 }
 
-var classVDK = classifyRisk5(rusleVDK)
-  .rename('RiskClass_VDK');
+var classVDK = classifyErosionClass5(rusleVDK)
+  .rename('ErosionClass_VDK');
 
-var classLinear = classifyRisk5(rusleLinear)
-  .rename('RiskClass_LINEAR');
+var classLinear = classifyErosionClass5(rusleLinear)
+  .rename('ErosionClass_LINEAR');
 
 // Positive values mean Linear is assigned to a higher class.
 var classDifference = classLinear
   .subtract(classVDK)
-  .rename('RiskClass_Difference');
+  .rename('ErosionClass_Difference');
 
 // Binary agreement and direction layers.
 var sameClass = classVDK.eq(classLinear);
@@ -877,7 +889,7 @@ print(
 
 
 // ============================================================================
-// 10. FIVE-BY-FIVE RISK-CLASS TRANSITION MATRIX
+// 10. FIVE-BY-FIVE EROSION-CLASS TRANSITION MATRIX
 // ============================================================================
 
 // Pair codes:
@@ -1012,9 +1024,9 @@ var classLabelDictionary = ee.Dictionary({
 
 var classAreaTable = ee.FeatureCollection(
 
-  classes.map(function(riskClass) {
+  classes.map(function(erosionClass) {
 
-    riskClass = ee.Number(riskClass);
+    erosionClass = ee.Number(erosionClass);
 
     var vdkAreaKm2 = numberOrZero(
 
@@ -1022,7 +1034,7 @@ var classAreaTable = ee.FeatureCollection(
         .filter(
           ee.Filter.eq(
             'VDK_class',
-            riskClass
+            erosionClass
           )
         )
         .aggregate_sum('Area_km2')
@@ -1034,7 +1046,7 @@ var classAreaTable = ee.FeatureCollection(
         .filter(
           ee.Filter.eq(
             'LINEAR_class',
-            riskClass
+            erosionClass
           )
         )
         .aggregate_sum('Area_km2')
@@ -1042,12 +1054,12 @@ var classAreaTable = ee.FeatureCollection(
 
     return ee.Feature(null, {
 
-      Risk_class:
-        riskClass,
+      Erosion_class:
+        erosionClass,
 
      Class_interval:
   classLabelDictionary.get(
-    riskClass.format('%.0f')
+    erosionClass.format('%.0f')
   ),
 
       VDK_area_km2:
@@ -1072,7 +1084,7 @@ var classAreaTable = ee.FeatureCollection(
 );
 
 print(
-  'Risk-class area table',
+  'Erosion-class area table',
   classAreaTable
 );
 
@@ -1103,7 +1115,7 @@ var transitionAgreementComponents =
       classAreaTable
         .filter(
           ee.Filter.eq(
-            'Risk_class',
+            'Erosion_class',
             vClass
           )
         )
@@ -1115,7 +1127,7 @@ var transitionAgreementComponents =
       classAreaTable
         .filter(
           ee.Filter.eq(
-            'Risk_class',
+            'Erosion_class',
             lClass
           )
         )
@@ -1356,11 +1368,9 @@ function buildRankComparison(
   var numberOfDistricts =
     collection.size();
 
-  // For 22 districts this gives six districts.
-  var top25CutoffRank =
-    numberOfDistricts
-      .multiply(0.25)
-      .ceil();
+  // Manuscript priority group: ranks 1-6.
+  // Kept explicit so the code matches the reported top-six analysis.
+  var top6CutoffRank = ee.Number(6);
 
   var rankTable = ee.FeatureCollection(
 
@@ -1385,17 +1395,17 @@ function buildRankComparison(
         linearFeature.get('LINEAR_rank')
       );
 
-      var isVDKTop25 =
-        vdkRank.lte(top25CutoffRank);
+      var isVDKTop6 =
+        vdkRank.lte(top6CutoffRank);
 
-      var isLinearTop25 =
-        linearRank.lte(top25CutoffRank);
+      var isLinearTop6 =
+        linearRank.lte(top6CutoffRank);
 
-      var stableTop25 =
-        isVDKTop25.and(isLinearTop25);
+      var stableTop6 =
+        isVDKTop6.and(isLinearTop6);
 
-      var scenarioSensitiveTop25 =
-        isVDKTop25.neq(isLinearTop25);
+      var scenarioSensitiveTop6 =
+        isVDKTop6.neq(isLinearTop6);
 
       return vdkFeature.set({
 
@@ -1422,11 +1432,11 @@ function buildRankComparison(
             .subtract(vdkRank)
             .abs(),
 
-        Stable_top25:
-          stableTop25,
+        Stable_top6:
+          stableTop6,
 
-        Scenario_sensitive_top25:
-          scenarioSensitiveTop25
+        Scenario_sensitive_top6:
+          scenarioSensitiveTop6
       });
     })
   );
@@ -1444,24 +1454,24 @@ function buildRankComparison(
       ]
     });
 
-  var stableTopDistricts =
+  var stableTop6Districts =
     rankTable
 
       .filter(
         ee.Filter.eq(
-          'Stable_top25',
+          'Stable_top6',
           1
         )
       )
 
       .aggregate_array('unit_name');
 
-  var sensitiveTopDistricts =
+  var sensitiveTop6Districts =
     rankTable
 
       .filter(
         ee.Filter.eq(
-          'Scenario_sensitive_top25',
+          'Scenario_sensitive_top6',
           1
         )
       )
@@ -1482,8 +1492,8 @@ function buildRankComparison(
     Number_of_districts:
       numberOfDistricts,
 
-    Top25_cutoff_rank:
-      top25CutoffRank,
+    Top6_cutoff_rank:
+      top6CutoffRank,
 
     Spearman_rank_correlation:
       rankCorrelation.get('correlation'),
@@ -1501,35 +1511,35 @@ function buildRankComparison(
         'Absolute_rank_change'
       ),
 
-    Stable_top25_district_count:
+    Stable_top6_district_count:
       rankTable
 
         .filter(
           ee.Filter.eq(
-            'Stable_top25',
+            'Stable_top6',
             1
           )
         )
 
         .size(),
 
-    Scenario_sensitive_top25_district_count:
+    Scenario_sensitive_top6_district_count:
       rankTable
 
         .filter(
           ee.Filter.eq(
-            'Scenario_sensitive_top25',
+            'Scenario_sensitive_top6',
             1
           )
         )
 
         .size(),
 
-    Stable_top25_districts:
-      stableTopDistricts,
+    Stable_top6_districts:
+      stableTop6Districts,
 
-    Scenario_sensitive_top25_districts:
-      sensitiveTopDistricts
+    Scenario_sensitive_top6_districts:
+      sensitiveTop6Districts
   });
 
   return {
@@ -1674,7 +1684,7 @@ Export.table.toDrive({
     ee.FeatureCollection([regionSummary]),
 
   description:
-    'RUSLE_VDK_LINEAR_Region_Comparison_Official5Class_2024',
+    'RUSLE_VDK_LINEAR_Region_Comparison_Official5Class_SI_2024',
 
   fileFormat:
     'CSV'
@@ -1688,7 +1698,7 @@ Export.table.toDrive({
     districtComparison,
 
   description:
-    'RUSLE_VDK_LINEAR_District_Comparison_Official5Class_2024',
+    'RUSLE_VDK_LINEAR_District_Comparison_Official5Class_SI_2024',
 
   fileFormat:
     'CSV'
@@ -1702,7 +1712,7 @@ Export.table.toDrive({
     pairAreaTable,
 
   description:
-    'RUSLE_VDK_LINEAR_5Class_Transition_Matrix_2024',
+    'RUSLE_VDK_LINEAR_5Class_Transition_Matrix_SI_2024',
 
   fileFormat:
     'CSV'
@@ -1716,7 +1726,7 @@ Export.table.toDrive({
     classAreaTable,
 
   description:
-    'RUSLE_VDK_LINEAR_5Class_Area_Statistics_2024',
+    'RUSLE_VDK_LINEAR_5Class_Area_Statistics_SI_2024',
 
   fileFormat:
     'CSV'
@@ -1732,7 +1742,7 @@ Export.table.toDrive({
     ]),
 
   description:
-    'RUSLE_VDK_LINEAR_5Class_Agreement_Summary_2024',
+    'RUSLE_VDK_LINEAR_5Class_Agreement_Summary_SI_2024',
 
   fileFormat:
     'CSV'
@@ -1746,7 +1756,7 @@ Export.table.toDrive({
     meanRankResult.table,
 
   description:
-    'RUSLE_VDK_LINEAR_District_Ranking_Mean_2024',
+    'RUSLE_VDK_LINEAR_District_Ranking_Mean_SI_2024',
 
   fileFormat:
     'CSV'
@@ -1760,7 +1770,7 @@ Export.table.toDrive({
     t20RankResult.table,
 
   description:
-    'RUSLE_VDK_LINEAR_District_Ranking_T20_2024',
+    'RUSLE_VDK_LINEAR_District_Ranking_T20_SI_2024',
 
   fileFormat:
     'CSV'
@@ -1774,7 +1784,7 @@ Export.table.toDrive({
     t50RankResult.table,
 
   description:
-    'RUSLE_VDK_LINEAR_District_Ranking_T50_2024',
+    'RUSLE_VDK_LINEAR_District_Ranking_T50_SI_2024',
 
   fileFormat:
     'CSV'
@@ -1788,7 +1798,7 @@ Export.table.toDrive({
     rankSummaryCollection,
 
   description:
-    'RUSLE_VDK_LINEAR_District_Ranking_Summaries_2024',
+    'RUSLE_VDK_LINEAR_District_Ranking_Summaries_SI_2024',
 
   fileFormat:
     'CSV'
@@ -1805,7 +1815,7 @@ Export.image.toAsset({
     scenarioComparisonRaster,
 
   description:
-    'Export_RUSLE_VDK_LINEAR_Comparison_Official5Class_2024',
+    'Export_RUSLE_VDK_LINEAR_Comparison_Official5Class_SI_2024',
 
   assetId:
     OUTPUT_COMPARISON_ASSET,
@@ -1886,7 +1896,7 @@ Map.addLayer(
     max: 5,
     palette: classPalette
   },
-  'VDK official five-class risk',
+  'VDK five-class erosion',
   true
 );
 
@@ -1897,7 +1907,7 @@ Map.addLayer(
     max: 5,
     palette: classPalette
   },
-  'Linear official five-class risk',
+  'Linear five-class erosion',
   true
 );
 
@@ -1942,7 +1952,7 @@ Map.addLayer(
     max: 4,
     palette: classDifferencePalette
   },
-  'Risk-class difference',
+  'Erosion-class difference',
   true
 );
 
@@ -1970,7 +1980,7 @@ Map.addLayer(
 // ============================================================================
 
 print(
-  'Official class definitions',
+  'Class definitions',
   ee.Dictionary({
     Class_1: 'A < 5',
     Class_2: '5 <= A < 10',
@@ -2388,7 +2398,7 @@ Export.table.toDrive({
     ]),
 
   description:
-    'EXP1A_VDK_LogSpace_Percentiles_2024',
+    'EXP1A_VDK_LogSpace_Percentiles_SI_2024',
 
   fileFormat:
     'CSV'
@@ -2409,7 +2419,7 @@ Export.table.toDrive({
     ]),
 
   description:
-    'EXP1A_LINEAR_LogSpace_Percentiles_2024',
+    'EXP1A_LINEAR_LogSpace_Percentiles_SI_2024',
 
   fileFormat:
     'CSV'
@@ -2723,7 +2733,7 @@ Export.table.toDrive({
     ]),
 
   description:
-    'RUSLE_Regional_Statistics_Audit_2024',
+    'RUSLE_Regional_Statistics_Audit_SI_2024',
 
   fileFormat:
     'CSV'
@@ -3055,7 +3065,7 @@ Export.table.toDrive({
     exp1BHotspotTable,
 
   description:
-    'EXP1B_RUSLE_MatchedPercentile_Hotspot_Robustness_2024',
+    'EXP1B_RUSLE_MatchedPercentile_Hotspot_Robustness_SI_2024',
 
   fileFormat:
     'CSV'
@@ -3123,18 +3133,29 @@ function expMaskedAreaHa(maskImage, geometry) {
 // Existing land-cover raster.
 // If your final asset name is different, change ONLY this line.
 
+// Set EXP2_LANDCOVER_IS_VECTOR = true when using a Belarusian land-cover
+// FeatureCollection with numeric field 'LANDTYPE' (e.g., 101=arable, 103=meadow,
+// 201=forest, 702=mining/bare); set false if using a pre-rasterised Image.
+var EXP2_LANDCOVER_IS_VECTOR = true;
+var EXP2_LANDCOVER_CODE_FIELD = 'LANDTYPE';
 var EXP2_LANDCOVER_ASSET =
-  'projects/ee-geochzhao0822/assets/landcover_code';
+  'projects/YOUR_EE_PROJECT/assets/LANDCOVER_CATEGORIES';
 
-
-var exp2Landcover =
-  ee.Image(
-    EXP2_LANDCOVER_ASSET
-  )
-  .select(0)
-  .rename('landcover_code')
-  .toInt16()
-  .clip(region);
+var exp2Landcover = EXP2_LANDCOVER_IS_VECTOR
+  ? ee.FeatureCollection(EXP2_LANDCOVER_ASSET)
+      .filter(ee.Filter.notNull([EXP2_LANDCOVER_CODE_FIELD]))
+      .reduceToImage({
+        properties: [EXP2_LANDCOVER_CODE_FIELD],
+        reducer: ee.Reducer.first()
+      })
+      .rename('landcover_code')
+      .toInt16()
+      .clip(region)
+  : ee.Image(EXP2_LANDCOVER_ASSET)
+      .select(0)
+      .rename('landcover_code')
+      .toInt16()
+      .clip(region);
 
 
 // ============================================================================
@@ -3570,6 +3591,16 @@ var exp2ExcludedContinuousStats =
 // Used as a descriptive effect-size diagnostic only.
 // ============================================================================
 
+function exp2GetStat(dict, bandName, statName) {
+  dict = ee.Dictionary(dict);
+  var prefixed = bandName + '_' + statName;
+  return ee.Algorithms.If(
+    dict.contains(prefixed),
+    dict.get(prefixed),
+    dict.get(statName, null)
+  );
+}
+
 function exp2SMD(
   validDictionary,
   excludedDictionary,
@@ -3586,37 +3617,10 @@ function exp2SMD(
       excludedDictionary
     );
 
-
-  var validMean =
-    ee.Number(
-      validDictionary.get(
-        bandName + '_mean'
-      )
-    );
-
-
-  var excludedMean =
-    ee.Number(
-      excludedDictionary.get(
-        bandName + '_mean'
-      )
-    );
-
-
-  var validSD =
-    ee.Number(
-      validDictionary.get(
-        bandName + '_stdDev'
-      )
-    );
-
-
-  var excludedSD =
-    ee.Number(
-      excludedDictionary.get(
-        bandName + '_stdDev'
-      )
-    );
+  var validMean = ee.Number(exp2GetStat(validDictionary, bandName, 'mean'));
+  var excludedMean = ee.Number(exp2GetStat(excludedDictionary, bandName, 'mean'));
+  var validSD = ee.Number(exp2GetStat(validDictionary, bandName, 'stdDev'));
+  var excludedSD = ee.Number(exp2GetStat(excludedDictionary, bandName, 'stdDev'));
 
 
   var pooledSD =
@@ -4706,7 +4710,7 @@ Export.table.toDrive({
     ]),
 
   description:
-    'EXP2_RUSLE_Domain_Area_QA_2024',
+    'EXP2_RUSLE_Domain_Area_QA_SI_2024',
 
   fileFormat:
     'CSV'
@@ -4727,7 +4731,7 @@ Export.table.toDrive({
     ]),
 
   description:
-    'EXP2_RUSLE_Domain_NDVI_Slope_Audit_2024',
+    'EXP2_RUSLE_Domain_NDVI_Slope_Audit_SI_2024',
 
   fileFormat:
     'CSV'
@@ -4746,7 +4750,7 @@ Export.table.toDrive({
     exp2LandcoverCompositionTable,
 
   description:
-    'EXP2_RUSLE_Domain_Landcover_Composition_2024',
+    'EXP2_RUSLE_Domain_Landcover_Composition_SI_2024',
 
   fileFormat:
     'CSV'
@@ -4765,7 +4769,7 @@ Export.table.toDrive({
     exp2CoverageAssociationTable,
 
   description:
-    'EXP2_RUSLE_DistrictCoverage_Associations_2024',
+    'EXP2_RUSLE_DistrictCoverage_Associations_SI_2024',
 
   fileFormat:
     'CSV'
@@ -4786,7 +4790,7 @@ Export.table.toDrive({
     exp2CoverageRankInstabilityTable,
 
   description:
-    'EXP2B_RUSLE_Coverage_vs_RankInstability_2024',
+    'EXP2B_RUSLE_Coverage_vs_RankInstability_SI_2024',
 
   fileFormat:
     'CSV'
@@ -4809,11 +4813,11 @@ Export.image.toAsset({
     exp2DomainRaster,
 
   description:
-    'Export_EXP2_RUSLE_Valid_Excluded_Domain_2024',
+    'Export_EXP2_RUSLE_Valid_Excluded_Domain_SI_2024',
 
   assetId:
-    'projects/ee-geochzhao0822/assets/' +
-    'EXP2_RUSLE_Valid_Excluded_Domain_2024',
+    'projects/YOUR_EE_PROJECT/assets/' +
+    'EXP2_RUSLE_Valid_Excluded_Domain_SI_2024',
 
   region:
     region,
@@ -4860,7 +4864,7 @@ print(
 //   5 = A >= 50
 //
 // Class difference:
-//   RiskClass_LINEAR - RiskClass_VDK
+//   ErosionClass_LINEAR - ErosionClass_VDK
 //
 //   negative = VDK assigned a higher class
 //   0        = same class
@@ -4886,7 +4890,7 @@ var FIG3_SCALE = 30;
 // Int16 is used because -9999 cannot be stored safely in Int8.
 var FIG3_NODATA = -9999;
 
-var FIG3_DRIVE_FOLDER = 'RUSLE_Figure3_2024';
+var FIG3_DRIVE_FOLDER = 'RUSLE_Figure3_SI_2024';
 
 
 // ----------------------------------------------------------------------------
@@ -4963,13 +4967,13 @@ Export.image.toDrive({
   image: fig3VDKExport,
 
   description:
-    'FIG3A_RUSLE_VDK_Official5Class_2024',
+    'FIG3A_RUSLE_VDK_Official5Class_SI_2024',
 
   folder:
     FIG3_DRIVE_FOLDER,
 
   fileNamePrefix:
-    'FIG3A_RUSLE_VDK_Official5Class_2024',
+    'FIG3A_RUSLE_VDK_Official5Class_SI_2024',
 
   region:
     region,
@@ -5003,13 +5007,13 @@ Export.image.toDrive({
   image: fig3LinearExport,
 
   description:
-    'FIG3B_RUSLE_LINEAR_Official5Class_2024',
+    'FIG3B_RUSLE_LINEAR_Official5Class_SI_2024',
 
   folder:
     FIG3_DRIVE_FOLDER,
 
   fileNamePrefix:
-    'FIG3B_RUSLE_LINEAR_Official5Class_2024',
+    'FIG3B_RUSLE_LINEAR_Official5Class_SI_2024',
 
   region:
     region,
@@ -5043,13 +5047,13 @@ Export.image.toDrive({
   image: fig3DifferenceExport,
 
   description:
-    'FIG3C_RUSLE_ClassDifference_LINEAR_minus_VDK_2024',
+    'FIG3C_RUSLE_ClassDifference_LINEAR_minus_VDK_SI_2024',
 
   folder:
     FIG3_DRIVE_FOLDER,
 
   fileNamePrefix:
-    'FIG3C_RUSLE_ClassDifference_LINEAR_minus_VDK_2024',
+    'FIG3C_RUSLE_ClassDifference_LINEAR_minus_VDK_SI_2024',
 
   region:
     region,
@@ -5103,13 +5107,13 @@ Export.image.toDrive({
     fig3Stack,
 
   description:
-    'FIG3_RUSLE_Official5Class_ThreeBandStack_2024',
+    'FIG3_RUSLE_Official5Class_ThreeBandStack_SI_2024',
 
   folder:
     FIG3_DRIVE_FOLDER,
 
   fileNamePrefix:
-    'FIG3_RUSLE_Official5Class_ThreeBandStack_2024',
+    'FIG3_RUSLE_Official5Class_ThreeBandStack_SI_2024',
 
   region:
     region,

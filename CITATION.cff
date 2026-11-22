@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software or analytical workflow, please cite it as below."
+title: "Scale-dependent propagation of NDVI-C parameterisation uncertainty in regional RUSLE soil-erosion modelling: GEE reproducibility workflow"
+type: software
+authors:
+  - family-names: Zhao
+    given-names: Bochao
+    email: geozhao@outlook.com
+    orcid: "https://orcid.org/0000-0002-8968-6496"
+    affiliation: "Department of Soil Science and Geoinformation Systems, Belarusian State University, Minsk, Belarus"
+  - family-names: Chervan
+    given-names: Aliaksandr N.
+    affiliation: "Department of Soil Science and Geoinformation Systems, Belarusian State University, Minsk, Belarus"
+  - family-names: Zhang
+    given-names: Wei
+    affiliation: "Chongqing University, Chongqing, China"
+  - family-names: Zhong
+    given-names: Dongliang
+    affiliation: "Chongqing University, Chongqing, China"
+license: MIT
+version: "1.0.0-SI2024"
+date-released: "2026-11-22"
+keywords:
+  - RUSLE
+  - soil erosion modelling
+  - Sentinel-2
+  - C factor
+  - Google Earth Engine
+  - parameterisation uncertainty
+  - spatial robustness
+  - Minsk Region
